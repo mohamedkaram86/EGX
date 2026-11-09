@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Search,
   Activity,
@@ -10,7 +9,8 @@ import {
   Layers,
   Sparkles,
   Play,
-  Square
+  Square,
+  RotateCw
 } from 'lucide-react';
 import { StockItem } from '../types/market';
 
@@ -31,6 +31,8 @@ interface HeaderProps {
   onToggleLanguage: () => void;
   indices: StockItem[];
   onSelectStock: (stock: StockItem) => void;
+  onRefreshPrices?: () => void;
+  isRefreshingPrices?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -49,7 +51,9 @@ export const Header: React.FC<HeaderProps> = ({
   language,
   onToggleLanguage,
   indices,
-  onSelectStock
+  onSelectStock,
+  onRefreshPrices,
+  isRefreshingPrices
 }) => {
   // TradingView direct link helper
   const getTradingViewUrl = () => {
@@ -186,6 +190,19 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Search className="w-4 h-4 text-blue-400" />
         </button>
+
+        {/* Live Prices Sync Button */}
+        {onRefreshPrices && (
+          <button
+            onClick={onRefreshPrices}
+            disabled={isRefreshingPrices}
+            className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 min-h-[38px] text-xs font-medium rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-all whitespace-nowrap"
+            title={language === 'ar' ? 'تحديث أسعار البورصة اللحظية' : 'Refresh live market quotes'}
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-blue-400 ${isRefreshingPrices ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{language === 'ar' ? 'تحديث الأسعار' : 'Refresh'}</span>
+          </button>
+        )}
 
         {/* Live Simulator Toggle */}
         <button

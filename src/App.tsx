@@ -34,7 +34,7 @@ export default function App() {
   // 1. Stocks State: merge initial stocks with any persisted user favorites or custom stocks
   const [stocks, setStocks] = useState<StockItem[]>(() => {
     try {
-      const savedStr = localStorage.getItem('egx_stocks_v3') || localStorage.getItem('egx_stocks_v2') || localStorage.getItem('egx_stocks_v1');
+      const savedStr = localStorage.getItem('egx_stocks_v5');
       if (savedStr) {
         const savedList: StockItem[] = JSON.parse(savedStr);
         const savedMap = new Map(savedList.map(s => [s.id, s]));
@@ -104,20 +104,62 @@ export default function App() {
   // Persist stocks updates (favorites / custom additions)
   useEffect(() => {
     try {
-      localStorage.setItem('egx_stocks_v3', JSON.stringify(stocks));
+      localStorage.setItem('egx_stocks_v5', JSON.stringify(stocks));
     } catch {}
   }, [stocks]);
+
+  // Fetch live market quotes from server API on mount and periodically
+  useEffect(() => {
+    const fetchLiveQuotes = async () => {
+      try {
+        const res = await fetch('/api/egx/quotes');
+        const data = await res.json();
+        if (data.success && data.quotes) {
+          setStocks(prev => prev.map(s => {
+            const live = data.quotes[s.symbol];
+            if (live) {
+              return {
+                ...s,
+                currentPrice: live.price,
+                changePercent: live.changePercent,
+                changeValue: live.changeValue,
+                high24h: live.high || s.high24h,
+                low24h: live.low || s.low24h,
+                volume: live.volume || s.volume,
+                dateStr: new Date(live.updatedAt).toISOString().split('T')[0]
+              };
+            }
+            return s;
+          }));
+        }
+      } catch {}
+    };
+
+    fetchLiveQuotes();
+    const interval = setInterval(fetchLiveQuotes, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Ensure current stock exists
   const currentStock = useMemo(() => {
     return stocks.find(s => s.id === currentStockId) || stocks[0];
   }, [stocks, currentStockId]);
 
-  // Ensure daily candles exist for current stock
+  // Ensure daily candles exist for current stock (try live server first, fallback to generated)
   useEffect(() => {
     if (!dailyCandlesMap[currentStock.id]) {
       const generated = generateCandlesForStock(currentStock, 600);
       setDailyCandlesMap(prev => ({ ...prev, [currentStock.id]: generated }));
+
+      // Fetch real historical candles from API if available
+      fetch(`/api/egx/chart/${encodeURIComponent(currentStock.symbol)}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.candles) && res.candles.length >= 10) {
+            setDailyCandlesMap(prev => ({ ...prev, [currentStock.id]: res.candles }));
+          }
+        })
+        .catch(() => {});
     }
   }, [currentStock, dailyCandlesMap]);
 
@@ -295,6 +337,37 @@ export default function App() {
     }
   };
 
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
+
+  const handleRefreshPrices = async () => {
+    setIsRefreshingPrices(true);
+    try {
+      const res = await fetch('/api/egx/quotes');
+      const data = await res.json();
+      if (data.success && data.quotes) {
+        setStocks(prev => prev.map(s => {
+          const live = data.quotes[s.symbol];
+          if (live) {
+            return {
+              ...s,
+              currentPrice: live.price,
+              changePercent: live.changePercent,
+              changeValue: live.changeValue,
+              high24h: live.high || s.high24h,
+              low24h: live.low || s.low24h,
+              volume: live.volume || s.volume,
+              dateStr: new Date(live.updatedAt).toISOString().split('T')[0]
+            };
+          }
+          return s;
+        }));
+      }
+    } catch {}
+    finally {
+      setTimeout(() => setIsRefreshingPrices(false), 600);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0b0e14] dark:bg-[#0b0e14] text-slate-200 antialiased font-sans">
       {/* 1. Header (Top Bar Contract) */}
@@ -318,6 +391,8 @@ export default function App() {
         onToggleLanguage={() => setLanguage(prev => (prev === 'ar' ? 'en' : 'ar'))}
         indices={indices}
         onSelectStock={handleSelectStock}
+        onRefreshPrices={handleRefreshPrices}
+        isRefreshingPrices={isRefreshingPrices}
       />
 
       {/* 2. Main Workstation Area */}
