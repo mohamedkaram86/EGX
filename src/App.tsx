@@ -124,6 +124,8 @@ export default function App() {
     const fetchLiveQuotes = async () => {
       try {
         const res = await fetch('/api/egx/quotes');
+        const cType = res.headers.get('content-type') || '';
+        if (!cType.includes('application/json')) return;
         const data = await res.json();
         if (data.success && data.quotes) {
           setStocks(prev => prev.map(s => {
@@ -164,9 +166,12 @@ export default function App() {
 
       // Fetch real historical candles from API if available
       fetch(`/api/egx/chart/${encodeURIComponent(currentStock.symbol)}`)
-        .then(r => r.json())
+        .then(r => {
+          const cType = r.headers.get('content-type') || '';
+          return cType.includes('application/json') ? r.json() : null;
+        })
         .then(res => {
-          if (res.success && Array.isArray(res.candles) && res.candles.length >= 10) {
+          if (res && res.success && Array.isArray(res.candles) && res.candles.length >= 10) {
             setDailyCandlesMap(prev => ({ ...prev, [currentStock.id]: res.candles }));
           }
         })
@@ -354,6 +359,8 @@ export default function App() {
     setIsRefreshingPrices(true);
     try {
       const res = await fetch('/api/egx/quotes');
+      const cType = res.headers.get('content-type') || '';
+      if (!cType.includes('application/json')) return;
       const data = await res.json();
       if (data.success && data.quotes) {
         setStocks(prev => prev.map(s => {
