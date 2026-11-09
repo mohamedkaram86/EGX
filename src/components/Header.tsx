@@ -84,18 +84,20 @@ export const Header: React.FC<HeaderProps> = ({
           <Layers className="w-4 h-4" />
         </button>
 
-        {/* Brand identity */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-xs text-xs md:text-sm">
-            EGX
-          </div>
+        {/* Brand identity with Logo */}
+        <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
+          <img
+            src="/assets/aistudio/logo-emblem.png"
+            alt="Mohamed El Akkad"
+            className="h-7 w-auto md:h-8.5 object-contain drop-shadow-sm select-none"
+          />
           <div className="hidden sm:flex flex-col">
             <div className="flex items-center gap-1 leading-none">
-              <span className="font-bold text-xs md:text-sm tracking-tight text-white">
-                MOHAMED <span className="text-emerald-400">EL AKKAD</span>
+              <span className="font-extrabold text-xs md:text-sm tracking-tight text-white font-sans">
+                MOHAMED <span className="text-emerald-400 font-black">EL AKKAD</span>
               </span>
             </div>
-            <span className="text-[9px] md:text-[10px] text-slate-400 tracking-wider uppercase font-medium">
+            <span className="text-[9px] md:text-[10px] text-slate-400 tracking-wider uppercase font-semibold font-mono">
               EGX Charts
             </span>
           </div>
