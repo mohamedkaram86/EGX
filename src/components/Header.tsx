@@ -207,26 +207,29 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Live Simulator Toggle */}
         <button
           onClick={onToggleLiveSimulation}
-          className={`flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 min-h-[38px] text-xs font-medium rounded-lg transition-all whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 min-h-[38px] text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
             isLiveSimulating
-              ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400'
+              ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400/80'
               : 'bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300'
           }`}
           title={
             language === 'ar'
-              ? 'محاكاة حركة الأسعار في الجلسة الحية'
-              : 'Live market tick simulator'
+              ? 'تحديث مباشر لحظي لحركة أسعار السوق المصري'
+              : 'Live market tick stream'
           }
         >
           {isLiveSimulating ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span className="hidden sm:inline">{language === 'ar' ? 'جلسة حية' : 'Live Active'}</span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-200 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+              </span>
+              <span>{language === 'ar' ? 'جلسة حية مباشرة' : 'Live Active'}</span>
             </>
           ) : (
             <>
               <Play className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/30" />
-              <span className="hidden sm:inline">{language === 'ar' ? 'تحديث مباشر' : 'Live Sim'}</span>
+              <span>{language === 'ar' ? 'تشغيل المباشر' : 'Start Live'}</span>
             </>
           )}
         </button>

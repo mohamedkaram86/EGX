@@ -193,6 +193,10 @@ export const WatchlistSidebar: React.FC<WatchlistSidebarProps> = ({
           <span className="font-bold text-xs text-white uppercase tracking-wider">
             {language === 'ar' ? 'قائمة المراقبة — البورصة المصرية' : 'EGX Watchlist'}
           </span>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[9px] font-medium border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            {language === 'ar' ? 'مباشر' : 'LIVE'}
+          </span>
           <span className="text-[10px] text-slate-400 font-mono">({filteredStocks.length})</span>
         </div>
 
@@ -313,6 +317,11 @@ export const WatchlistSidebar: React.FC<WatchlistSidebarProps> = ({
           filteredStocks.map(stock => {
             const isSelected = stock.id === selectedStockId;
             const isUp = stock.changePercent >= 0;
+            const isRecentlyTicked = !!(
+              stock.lastTick &&
+              stock.lastTickTime &&
+              Date.now() - stock.lastTickTime < 1300
+            );
 
             return (
               <div
@@ -321,8 +330,12 @@ export const WatchlistSidebar: React.FC<WatchlistSidebarProps> = ({
                   onSelectStock(stock);
                   if (onCloseMobile) onCloseMobile();
                 }}
-                className={`group flex items-center justify-between p-2.5 cursor-pointer transition-all ${
-                  isSelected
+                className={`group flex items-center justify-between p-2.5 cursor-pointer transition-all duration-300 ${
+                  isRecentlyTicked
+                    ? stock.lastTick === 'up'
+                      ? 'bg-emerald-500/20 shadow-inner'
+                      : 'bg-rose-500/20 shadow-inner'
+                    : isSelected
                     ? 'bg-blue-600/15 border-s-2 border-blue-500'
                     : 'hover:bg-slate-900/60'
                 }`}
@@ -367,17 +380,30 @@ export const WatchlistSidebar: React.FC<WatchlistSidebarProps> = ({
 
                 {/* Right: Price + Change */}
                 <div className="text-end font-mono shrink-0">
-                  <span className="block font-semibold text-xs text-slate-100">
+                  <span
+                    className={`block font-semibold text-xs transition-colors duration-300 ${
+                      isRecentlyTicked
+                        ? stock.lastTick === 'up'
+                          ? 'text-emerald-400 font-bold scale-105'
+                          : 'text-rose-400 font-bold scale-105'
+                        : 'text-slate-100'
+                    }`}
+                  >
                     {stock.currentPrice.toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
+                      minimumFractionDigits: stock.currentPrice < 2 ? 3 : 2,
+                      maximumFractionDigits: stock.currentPrice < 2 ? 3 : 2
                     })}
                   </span>
                   <span
-                    className={`inline-flex items-center text-[10px] font-medium ${
+                    className={`inline-flex items-center gap-0.5 text-[10px] font-medium transition-colors ${
                       isUp ? 'text-emerald-400' : 'text-rose-400'
                     }`}
                   >
+                    {isUp ? (
+                      <TrendingUp className="w-2.5 h-2.5 shrink-0" />
+                    ) : (
+                      <TrendingDown className="w-2.5 h-2.5 shrink-0" />
+                    )}
                     {isUp ? '+' : ''}
                     {stock.changePercent.toFixed(2)}%
                   </span>

@@ -92,7 +92,7 @@ export default function App() {
   const [showAnalysis, setShowAnalysis] = useState<boolean>(true);
   const [showOrderBook, setShowOrderBook] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-  const [isLiveSimulating, setIsLiveSimulating] = useState<boolean>(false);
+  const [isLiveSimulating, setIsLiveSimulating] = useState<boolean>(true);
   const [isDarkTheme, setIsDarkTheme] = useState<boolean>(true);
   const [language, setLanguage] = useState<'ar' | 'en'>('ar');
   const [mobileTab, setMobileTab] = useState<MobileTab>('chart');
@@ -112,12 +112,12 @@ export default function App() {
     document.documentElement.lang = language;
   }, [language]);
 
-  // Persist stocks updates (favorites / custom additions)
+  // Persist stocks updates (favorites / custom additions only)
   useEffect(() => {
     try {
       localStorage.setItem('egx_stocks_v5', JSON.stringify(stocks));
     } catch {}
-  }, [stocks]);
+  }, [stocks.map(s => `${s.id}-${s.isFavorite}-${s.isCustom}`).join(',')]);
 
   // Fetch live market quotes from server API on mount and periodically
   useEffect(() => {
@@ -203,11 +203,14 @@ export default function App() {
     return stocks.filter(s => s.isIndex);
   }, [stocks]);
 
-  // Live Simulation Interval (Realistic tick-by-tick order updates)
+  // Live Simulation Interval (Realistic tick-by-tick market activity across the watchlist)
   useEffect(() => {
     if (!isLiveSimulating) return;
 
     const interval = setInterval(() => {
+      const now = Date.now();
+
+      // 1. Update dailyCandlesMap for currentStock
       setDailyCandlesMap(prevMap => {
         const currentSeries = prevMap[currentStock.id];
         if (!currentSeries || currentSeries.length === 0) return prevMap;
@@ -215,36 +218,56 @@ export default function App() {
         const updated = [...currentSeries];
         const last = { ...updated[updated.length - 1] };
 
-        // Small realistic tick delta (-0.2% to +0.2%)
+        // Micro-tick delta (-0.2% to +0.2%)
         const deltaPct = (Math.random() - 0.49) * 0.0035;
         const newPrice = +(last.c * (1 + deltaPct)).toFixed(2);
         last.c = newPrice;
         last.h = +Math.max(last.h, newPrice).toFixed(2);
         last.l = +Math.min(last.l, newPrice).toFixed(2);
-        last.v += Math.round(5000 + Math.random() * 25000);
+        last.v += Math.round(3000 + Math.random() * 18000);
 
         updated[updated.length - 1] = last;
-
-        // Also update stock's current price in stocks list
-        setStocks(prevStocks =>
-          prevStocks.map(s => {
-            if (s.id !== currentStock.id) return s;
-            const prevClose = updated.length >= 2 ? updated[updated.length - 2].c : newPrice;
-            const chgVal = +(newPrice - prevClose).toFixed(2);
-            const chgPct = +((chgVal / prevClose) * 100).toFixed(2);
-            return {
-              ...s,
-              currentPrice: newPrice,
-              changeValue: chgVal,
-              changePercent: chgPct,
-              high24h: Math.max(s.high24h, newPrice),
-              low24h: Math.min(s.low24h, newPrice),
-              volume: s.volume + Math.round(1000 + Math.random() * 5000)
-            };
-          })
-        );
-
         return { ...prevMap, [currentStock.id]: updated };
+      });
+
+      // 2. Update stocks list: tick currentStock + 2 to 4 randomly chosen stocks across watchlist
+      setStocks(prevStocks => {
+        if (!prevStocks || prevStocks.length === 0) return prevStocks;
+
+        const numRandomTicks = 2 + Math.floor(Math.random() * 3);
+        const randomIndexes = new Set<number>();
+        for (let i = 0; i < numRandomTicks; i++) {
+          randomIndexes.add(Math.floor(Math.random() * prevStocks.length));
+        }
+
+        return prevStocks.map((s, idx) => {
+          const isCurrent = s.id === currentStock.id;
+          const isRandom = randomIndexes.has(idx);
+
+          if (!isCurrent && !isRandom) {
+            return s;
+          }
+
+          const deltaPct = (Math.random() - 0.49) * 0.0035;
+          const decimals = s.currentPrice < 2 ? 3 : 2;
+          const rawPrice = s.currentPrice * (1 + deltaPct);
+          const newPrice = Math.max(0.01, +rawPrice.toFixed(decimals));
+          const tickDir: 'up' | 'down' = newPrice >= s.currentPrice ? 'up' : 'down';
+          const chgVal = +(s.changeValue + (newPrice - s.currentPrice)).toFixed(decimals);
+          const chgPct = +(s.changePercent + (deltaPct * 100)).toFixed(2);
+
+          return {
+            ...s,
+            currentPrice: newPrice,
+            changeValue: chgVal,
+            changePercent: chgPct,
+            high24h: Math.max(s.high24h, newPrice),
+            low24h: Math.min(s.low24h, newPrice),
+            volume: s.volume + Math.round(500 + Math.random() * 4000),
+            lastTick: tickDir,
+            lastTickTime: now
+          };
+        });
       });
     }, 1400);
 

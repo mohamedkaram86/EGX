@@ -29,6 +29,8 @@ export interface StockItem {
   isFavorite?: boolean;
   isCustom?: boolean;
   dateStr?: string;
+  lastTick?: 'up' | 'down';
+  lastTickTime?: number;
 }
 
 export interface IndicatorConfig {
