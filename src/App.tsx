@@ -34,11 +34,22 @@ export default function App() {
   // 1. Stocks State: merge initial stocks with any persisted user favorites or custom stocks
   const [stocks, setStocks] = useState<StockItem[]>(() => {
     try {
+      localStorage.removeItem('egx_stocks_v1');
+      localStorage.removeItem('egx_stocks_v2');
+      localStorage.removeItem('egx_stocks_v3');
+      localStorage.removeItem('egx_stocks_v4');
+
       const savedStr = localStorage.getItem('egx_stocks_v5');
       if (savedStr) {
         const savedList: StockItem[] = JSON.parse(savedStr);
+        // Safety check: if old COMI was saved with outdated 128 price, auto-purge
+        const comi = savedList.find(s => s.id === 'COMI');
+        if (comi && comi.currentPrice > 100) {
+          localStorage.removeItem('egx_stocks_v5');
+          return INITIAL_EGX_STOCKS;
+        }
+
         const savedMap = new Map(savedList.map(s => [s.id, s]));
-        // Merge initial stocks with user favorites, then append any custom-created stocks
         const merged = INITIAL_EGX_STOCKS.map(initStock => {
           const found = savedMap.get(initStock.id);
           return found ? { ...initStock, isFavorite: found.isFavorite } : initStock;
